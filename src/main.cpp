@@ -3,6 +3,6 @@
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
-    storage::FileLoader loader{};
+    diddo::storage::FileLoader loader("");
     return 0;
 }

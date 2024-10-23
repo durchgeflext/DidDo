@@ -1,26 +1,34 @@
 
 #ifndef FILELOADER_HPP
 #define FILELOADER_HPP
-#include <string>
 
 #endif //FILELOADER_HPP
 
+#include <string>
 #include <fstream>
 #include <vector>
 
-namespace storage {
+#include <UI/UIHandler.hpp>
+
+
+namespace diddo::storage {
 
   class FileLoader {
     private:
-    const std::string& path;
+    constexpr std::string className = "FileLoader";
     constexpr std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out;
+    const std::string& path;
     std::fstream data;
     std::vector<std::string> lines;
 
     void readLines() {
-      //TODO: Check for error codes
       while (!data.eof) {
         std::getline(data, lines.back(), '\n');
+        if (data.rdstate() == std::ios_base::badbit) {
+          ui::UIHandler::error(className, "irrecoverable stream error when reading \"" + path + "\".");
+        }
+        if (data.rdstate() == std::ios_base::failbit) {}
+          ui::UIHandler::error(className, "reading \"" + path + "\" did not work, formatting or extraction error.");
       }
     };
 
