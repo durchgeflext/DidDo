@@ -10,7 +10,11 @@ namespace diddo::ui {
     private:
 
     public:
-      static void error(const std::string& origin, const std::string& errorMessage) {
+      static void warning(const std::string_view& origin, const std::string& message) {
+        std::cout << "WARNING:" << "[" << origin << "]" << " " << message << std::endl;
+      }
+
+      static void error(const std::string_view& origin, const std::string& errorMessage) {
         std::cerr << "[" << origin << "]" << " " << errorMessage << std::endl;
       }
   };
