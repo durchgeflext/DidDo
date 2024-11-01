@@ -11,22 +11,32 @@ namespace diddo::storage {
       static constexpr std::string_view className = "DiaryLoader";
       const std::string path;
       std::filesystem::directory_iterator fileIt;
+      std::vector<std::unique_ptr<std::vector<std::string>>> diary;
 
     public:
       DiaryLoader() = delete;
-      explicit DiaryLoader(const std::string& path) : path(path), fileIt(path){};
+      explicit DiaryLoader(const std::string &path) : path(path), fileIt(path) {
+        diary = std::vector<std::unique_ptr<std::vector<std::string>>>(10);
+        for (const std::filesystem::directory_entry &file : fileIt) {
+          if (file.is_directory()) {
+            ui::UIHandler::warning(
+                className,
+                "There is a directory where there should only be files");
+          }
+          const std::string &filePath = file.path().string();
+          FileLoader loader(filePath);
+          diary.emplace_back(loader.getLines());
+        }
+      };
 
       ~DiaryLoader()= default;
 
-      //TODO: Take crae of warnings and exceptions
-      [[nodiscard("Did you want to ignore all the data?")]] std::vector<std::unique_ptr<std::vector<std::string>>> loadDiary(const size_t fileNumber) const {
-        std::vector<std::unique_ptr<std::vector<std::string>>> result;
-        for (size_t fileIndex = 0; fileIndex < fileNumber; fileIndex++) {
-          const std::string& filePath = fileIt->path().string();
-          FileLoader loader(filePath);
-          result.emplace_back(loader.getLines());
-        }
-        return result;
+      [[nodiscard("Did you want to ignore all the data?")]] std::vector<std::unique_ptr<std::vector<std::string>>>& getDiary() {
+        return diary;
+      }
+
+      void addEntry(const std::vector<std::string>& entry) {
+        diary.emplace_back(std::make_unique<std::vector<std::string>>(entry));
       }
   };
 };

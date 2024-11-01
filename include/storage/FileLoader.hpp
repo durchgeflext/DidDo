@@ -9,8 +9,8 @@
 
 namespace diddo::storage {
 
+  ///This class handles loading files, as well as deleting and saving them
   class FileLoader {
-    private:
     static constexpr std::string_view className = "FileLoader";
     static constexpr std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out;
     const std::string& path;
