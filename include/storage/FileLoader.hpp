@@ -9,83 +9,114 @@
 
 namespace diddo::storage {
 
+#define IGNORED_STATUS "Did you want to ignore the return status?"
+
   /**
    *This class handles loading files, as well as deleting and saving them.
    */
   class FileLoader {
-    static constexpr std::string_view className = "FileLoader";
+    static constexpr std::string_view CLASS_NAME = "FileLoader";
     static constexpr std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out;
     const std::string& path;
     std::shared_ptr<std::fstream> data;
 
     public:
     FileLoader() = delete;
+    FileLoader(FileLoader& file) = delete;
+    FileLoader(FileLoader&& file) = delete;
 
     /**
     * Constructor for the FileLoader class.
     *
-    * @param path: Reference to the path, where the file is located
+    * @param path Reference to the path, where the file is located
     */
     explicit FileLoader(const std::string& path) : path(path) {
-      data->open(path, mode);
-      ui::UIHandler::info(className, "The file " + path + " has been opened");
+
     }
 
-    /**
-    * Destructor for the FileLoader class. Closes and saves the file.
-    */
-    ~FileLoader() {
-      if(!data->is_open()) {
-        ui::UIHandler::warning(className,  "The file " + path + " has already been closed");
-        return;
-      }
-      data->close();
-      if (data->rdstate() == std::fstream::failbit) {
-        ui::UIHandler::error(className, "The file " + path + " could not be closed");
-      }
-    }
+    ~FileLoader() = default;
 
     /**
     * Returns the contents of the file.
     *
-    * @return: shared pointer to the file stream, which is both readable and writable
+    * @return shared pointer to the file stream, which is both readable and writable
     */
-    [[nodiscard("Did you want to ignore all the data?")]] std::shared_ptr<std::fstream> getContent() const {
-      if(!data->is_open()) {
-        ui::UIHandler::error(className, "The file " + path + " is not open");
+    [[nodiscard(IGNORED_STATUS)]]
+    bool getContent(std::shared_ptr<std::fstream>& data) const {
+      if(!this->data->is_open()) {
+        ui::UIHandler::error(CLASS_NAME, "The file " + path + " is not open");
+        return false;
       }
-      return data;
+      data = this->data;
+      return true;
     }
 
     /**
     * Closes and deletes the file.
+    *
+    * @return Returns true, if operation was successful and false otherwise
     */
-    void deleteFile() {
+    [[nodiscard(IGNORED_STATUS)]]
+    bool deleteFile() const {
       data->close();
       if (data->rdstate() == std::fstream::failbit) {
-        ui::UIHandler::warning(className, "The file " + path + " could not be closed correctly before deletion");
+        ui::UIHandler::warning(CLASS_NAME, "The file " + path + " could not be closed correctly");
+        return false;
       }
 
       std::error_code ec;
       if (std::filesystem::remove(path, ec)) {
-        ui::UIHandler::info(className, "The file " + path + " has been deleted");
-        return;
+        ui::UIHandler::info(CLASS_NAME, "The file " + path + " has been deleted");
+        return true;
       }
 
       if (0 == ec.value()) {
-        ui::UIHandler::warning(className, "The file " + path + "could not be deleted, but didn't produce an error");
-        return;
+        ui::UIHandler::warning(CLASS_NAME, "The file " + path + "could not be deleted, but didn't produce an error");
+        return false;
       }
-
-      if (ec.value() != 0) {
-        ui::UIHandler::error(className, "An error occurred while deleting the file " + path + ": " + ec.message());
-      }
+      ui::UIHandler::error(CLASS_NAME, "An error occurred while deleting the file " + path + ": " + ec.message());
+      return false;
     }
 
-    void renameFile(std::string& newPath) {
+    /**
+     * Renames the file
+     *
+     * @param newPath The new name of the file
+     * @return True, if successful, false otherwise
+     */
+    bool renameFile(std::string& newPath) {
       //TODO: Implement renaming of files
-      ui::UIHandler::warning(className, "File renaming is not yet implemented");
+      ui::UIHandler::warning(CLASS_NAME, "File renaming is not yet implemented");
+      return false;
+    }
 
+    /**
+     * Opens the file
+     *
+     * @return True, if the file was opened successfully, false otherwise
+     */
+    [[nodiscard(IGNORED_STATUS)]]
+    bool openFile() const {
+      data->open(path, mode);
+      if (data->rdstate() == std::fstream::failbit) {
+        ui::UIHandler::error(CLASS_NAME, "The file " + path + " could not be opened");
+        return false;
+      }
+      ui::UIHandler::info(CLASS_NAME, "The file " + path + " has been opened");
+      return true;
+    }
+
+    [[nodiscard]] bool closeFile() const {
+      if(!data->is_open()) {
+        ui::UIHandler::warning(CLASS_NAME,  "The file " + path + " has already been closed");
+        return true;
+      }
+      data->close();
+      if (data->rdstate() == std::fstream::failbit) {
+        ui::UIHandler::error(CLASS_NAME, "The file " + path + " could not be closed");
+        return false;
+      }
+      return true;
     }
 
   };
