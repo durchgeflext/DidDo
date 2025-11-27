@@ -1,7 +1,4 @@
-#ifndef UIHANDLER_HPP
-#define UIHANDLER_HPP
-
-#endif //UIHANDLER_HPP
+#pragma once
 
 #include <string>
 

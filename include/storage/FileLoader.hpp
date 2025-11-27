@@ -1,8 +1,11 @@
 #pragma once
 
+#include <algorithm>
+#include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #include <UI/UIHandler.hpp>
 
@@ -16,7 +19,7 @@ namespace diddo::storage {
     class FileLoader {
         static constexpr std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out;
         const std::string &path;
-        std::shared_ptr<std::fstream> data;
+        std::fstream data;
 
         public:
         FileLoader() = delete;
@@ -38,15 +41,102 @@ namespace diddo::storage {
         /**
         * Returns the contents of the file.
         *
-        * @return shared pointer to the file stream, which is both readable and writable
+        * @return a vector of strings representing each line
         */
         [[nodiscard(IGNORED_STATUS)]]
-        bool getContent(std::shared_ptr<std::fstream> &data) const {
-            if (!this->data->is_open()) {
+        bool getContent(std::vector<std::string>& strv) {
+            if (!strv.empty()) {
+                ui::UIHandler::error<FileLoader>("The input vector is not empty");
+                return false;
+            }
+
+            if (!data.is_open()) {
                 ui::UIHandler::error<FileLoader>("The file " + path + " is not open");
                 return false;
             }
-            data = this->data;
+
+            std::string tmp;
+            while (std::getline(data, tmp)) {
+                strv.push_back(tmp);
+            }
+            return true;
+        }
+
+        /**
+        * Returns the contents of the file.
+        *
+        * @return string with file contents
+        */
+        [[nodiscard(IGNORED_STATUS)]]
+        bool getContent(std::string& str) {
+            if (!str.empty()) {
+                ui::UIHandler::error<FileLoader>("The input string is not empty");
+                return false;
+            }
+
+            if (!data.is_open()) {
+                ui::UIHandler::error<FileLoader>("The file " + path + " is not open");
+                return false;
+            }
+
+            std::stringstream buf;
+            buf << data.rdbuf();
+            str = buf.str();
+            return true;
+        }
+
+        /**
+         * Writes data back to the file
+         *
+         * @param strv The vector containing the lines
+         * @return True, if everything succeeded, false otherwise
+         */
+        [[nodiscard(IGNORED_STATUS)]]
+        bool writeContent(const std::vector<std::string>& strv) {
+            if (strv.empty()) {
+                ui::UIHandler::warning<FileLoader>("Writing nothing to file, as the input is empty");
+                return true;
+            }
+
+            if (!data.is_open()) {
+                ui::UIHandler::error<FileLoader>("The file " + path + " is not open");
+                return false;
+            }
+
+            for (const auto& line : strv) { // NOLINT(readability-use-anyofallof)
+                data << line << "\n";
+                if (data.rdstate() == std::fstream::failbit) {
+                    ui::UIHandler::error<FileLoader>("Encountered Error when attempting to write \""
+                                                        + line + "\" to file " + path);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /**
+         * Writes data back to the file
+         *
+         * @param str The string with the input data
+         * @return True, if everything succeeded, false otherwise
+         */
+        [[nodiscard(IGNORED_STATUS)]]
+        bool writeContent(const std::string& str) {
+            if (str.empty()) {
+                ui::UIHandler::warning<FileLoader>("Writing nothing to file, as the input is empty");
+                return true;
+            }
+
+            if (!data.is_open()) {
+                ui::UIHandler::error<FileLoader>("The file " + path + " is not open");
+                return false;
+            }
+
+            data << str;
+            if (data.rdstate() == std::fstream::failbit) {
+                ui::UIHandler::error<FileLoader>("Encountered error when attempting to write to file " + path);
+                return false;
+            }
             return true;
         }
 
@@ -56,9 +146,9 @@ namespace diddo::storage {
         * @return Returns true, if operation was successful and false otherwise
         */
         [[nodiscard(IGNORED_STATUS)]]
-        bool deleteFile() const {
-            data->close();
-            if (data->rdstate() == std::fstream::failbit) {
+        bool deleteFile() {
+            data.close();
+            if (data.rdstate() == std::fstream::failbit) {
                 ui::UIHandler::warning<FileLoader>("The file " + path + " could not be closed correctly");
                 return false;
             }
@@ -96,9 +186,9 @@ namespace diddo::storage {
          * @return True, if the file was opened successfully, false otherwise
          */
         [[nodiscard(IGNORED_STATUS)]]
-        bool openFile() const {
-            data->open(path, mode);
-            if (data->rdstate() == std::fstream::failbit) {
+        bool openFile() {
+            data.open(path, mode);
+            if (data.rdstate() == std::fstream::failbit) {
                 ui::UIHandler::error<FileLoader>("The file " + path + " could not be opened");
                 return false;
             }
@@ -106,13 +196,14 @@ namespace diddo::storage {
             return true;
         }
 
-        [[nodiscard]] bool closeFile() const {
-            if (!data->is_open()) {
+        [[nodiscard(IGNORED_STATUS)]]
+        bool closeFile() {
+            if (!data.is_open()) {
                 ui::UIHandler::warning<FileLoader>("The file " + path + " has already been closed");
                 return true;
             }
-            data->close();
-            if (data->rdstate() == std::fstream::failbit) {
+            data.close();
+            if (data.rdstate() == std::fstream::failbit) {
                 ui::UIHandler::error<FileLoader>("The file " + path + " could not be closed");
                 return false;
             }
